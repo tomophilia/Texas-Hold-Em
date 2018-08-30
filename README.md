@@ -4,6 +4,8 @@ A Texas Hold Em poker game.
 
 User controls all players as of now.
 
+User plays as "Tom" and Tom's hand is displayed throughout each hand.
+
 Uses the Frenchdeck class from Fluent Python.
 
 All other code is original.  
