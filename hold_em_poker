@@ -1,0 +1,553 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Aug  2 20:59:43 2018
+
+@author: tomophilia
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 12 02:04:37 2018
+
+@author: tomophilia
+"""
+
+import collections
+from random import choice, shuffle
+from itertools import combinations
+from functools import reduce
+'''Create a card tuple'''
+Card = collections.namedtuple('Card', ['rank', 'suit'])
+
+'''create a deck, using the card tuple. this was taken from Fluent Python. '''
+class FrenchDeck():
+    ranks = [str(n) for n in range(2, 11)] + list('JQKA')
+    suits = 'spades diamonds clubs hearts'.split()
+
+    def __init__(self):
+        self.cards = [Card(rank, suit) for rank in self.ranks for suit in self.suits]
+
+    def __len__(self):
+        return len(self.cards)
+
+    def __getitem__(self, position):
+        return self.cards[position]
+
+
+deck = list(FrenchDeck())
+
+
+class Player():
+    '''Create a player and various methods for the player.'''
+    def __init__(self, name, hand, bankroll,bet):
+        self.name = name
+        self.hand = hand
+        self.bankroll = bankroll
+        self.action = False
+        self.winner = False
+        self.live_hand = False
+        self.bet = bet
+    def place_bet(self,bet):
+    	'''place a bet'''
+    	self.bankroll-=bet
+    	print(str(self.name) + ' bets ' + str(bet)+'\n'+'...his stack is now '+str(self.bankroll))
+    	self.bet=bet
+
+    def final_hand_met(self, hand, board):
+        '''create a function that will return the best five card hand from the board and players cards'''
+        all_nine_cards = self.hand+board
+        self.final_hand = [0, []]
+        combos = combinations(all_nine_cards, 5)
+        for i in combos:
+            l = rank_the_hand(i)
+            if l[0] > self.final_hand[0]:
+                self.final_hand = l
+            elif l[0] == self.final_hand[0]:
+                for j in range(len(self.final_hand[1])):
+                    if l[1][j] > self.final_hand[1][j]:
+                        self.final_hand = l
+                    else:
+                        continue
+            else:
+            	continue
+            #muck.append(i.hand)
+        self.hand = []
+        return self.final_hand
+    def identify_the_hand(self,final_hand):
+    	'''write a function to return a string that will say flush, straight, two pair, etc. 
+    	'''
+    	hand_text = ''
+    	new_hand_list=[]
+    	for i in self.final_hand[1]:
+    		if i==11:
+    			new_hand_list.append('Jack')
+    		elif i==12:
+    			new_hand_list.append('Queen')
+    		elif i ==13:
+    			new_hand_list.append('King')
+    		elif i==14:
+    			new_hand_list.append('Ace')
+    		else:
+    			new_hand_list.append(str(i))
+    	self.final_hand.remove(self.final_hand[1])
+    	self.final_hand.append(new_hand_list)
+    	#letter_cards={'J':11,'Q':12,'K':13,'A':14}
+    	print(final_hand)
+    	if final_hand[0]==8:
+    		hand_text=str(final_hand[1][0])+' high straight flush. '
+    	elif final_hand[0]==7:
+    		hand_text='Quad '+str(final_hand[1][0])+'s'
+    	elif final_hand[0]==6:
+    		hand_text='Full House - '+str(final_hand[1][0])+'s'+' over.'
+    	elif final_hand[0]==5:
+    		hand_text= str(final_hand[1][0])+' high flush. '
+    	elif final_hand[0]==4:
+    		hand_text=str(final_hand[1][0])+' high straight. '
+    	elif final_hand[0]==3:
+    		hand_text='Three ' + str(final_hand[1][0])+'s'
+    	elif final_hand[0]==2:
+    		hand_text= 'Two pair. '+str(final_hand[1][0])+'s'+' and '+ str(final_hand[1][1])+'s'
+    	elif final_hand[0]==1:
+    		hand_text=' a pair of '+str(final_hand[1][0])+'s'
+    	else:
+    		try:
+    			hand_text=str(final_hand[1][0])+' high junk'
+    		except:
+    			hand_text='high card'
+    	return hand_text
+    
+    def deal_a_hand(self, dadeck, howmanycards):
+        self.hand = []
+        self.live_hand = True
+        '''Deal a random hand of n length and remove those cards from the deck.'''
+        for i in range(howmanycards):
+            z = choice(dadeck)
+            self.hand.append(z)
+            dadeck.remove(z)
+        return self.hand
+
+
+def rank_the_hand(cards):
+    '''create a list object for evaluating a winner. '''
+    wheel = [14,5,4,3,2]
+    straight_id = [14,13,12,11,10,9,8,7,6,5,4,3,2,1]
+    Flush = False
+    Straight = False
+    '''Final_hand variable returns the hand type i.e. straight flush(8), quads(7) or full house(6) etc. As well as a second list to store other info.  '''
+    final_hand = [0,[]]
+    '''List of card ranks - Ace, King, 7, 3, 7 etc. (No suits) '''
+    card_ranks = [card.rank for card in cards]
+    '''List of card suits.'''
+    card_suits = [card.suit for card in cards]
+    if len(list(set(card_suits))) == 1:
+        Flush = True
+        #print(Flush)
+        #print(card_suits)
+        '''Convert the ranks to numbers.'''
+    for i in range(len(card_ranks)):
+      try:
+        card_ranks[i] = int(card_ranks[i])
+      except:
+        if card_ranks[i] == 'J':
+          card_ranks[i] = 11
+        elif card_ranks[i] == 'Q':
+          card_ranks[i] = 12
+        elif card_ranks[i] == 'K':
+          card_ranks[i] = 13
+        elif card_ranks[i] == 'A':
+          card_ranks[i] = 14
+    card_ranks = sorted(card_ranks, reverse=True)
+    bernanners = collections.Counter(card_ranks)
+    counts = bernanners.most_common(3)
+    if len(set(card_ranks)) == 2:
+      '''Four of a Kind. '''
+      if counts[0][1] == 4:
+        final_hand[0] = 7
+        final_hand[1].append(counts[0][0])
+      else:
+        '''Full House. '''
+        final_hand[0] = 6
+        final_hand[1].append(counts[0][0])
+    elif len(set(card_ranks)) == 3:
+      if counts[0][1] == 3:
+        #print('''Three of a Kind. ''')
+        final_hand[0] = 3
+        final_hand[1].append(counts[0][0])
+        final_hand[1].append(card_ranks[3])
+        final_hand[1].append(card_ranks[4])
+      else:
+        #print('''Two Pair''')
+        final_hand[0] = 2
+        final_hand[1].append(counts[1][0])
+        final_hand[1].append(counts[0][0])
+        final_hand[1] = sorted(final_hand[1], reverse=True)
+        final_hand[1].append(counts[2][0])
+    elif len(list(set(card_ranks))) == 4:
+      '''One Pair.'''
+      #print('One Pair')
+      final_hand[0] = 1
+      final_hand[1].append(card_ranks[0])
+      final_hand[1].append(card_ranks[2])
+      final_hand[1].append(card_ranks[3])
+      final_hand[1].append(card_ranks[4])
+    else:
+      '''All five cards different- Nothing, Straight, Flush or, Straight Flush.  '''
+      '''card_ranks[0] - card_ranks[4]'''
+      for i in range(len(straight_id)):
+        if straight_id[i:i + 5] == card_ranks or card_ranks == wheel:
+          Straight = True
+        else:
+          continue
+      if Flush == True and Straight == True:
+        #print('Straight Flush')
+        final_hand[0] = 8
+        if card_ranks == wheel:
+          final_hand[1].append(card_ranks[1])
+        else:
+          final_hand[1].append(card_ranks[0])
+      else:
+        if Flush == True:
+          #print('''Flush''')
+          final_hand[0] = 5
+          final_hand[1].append(card_ranks[0])
+          final_hand[1].append(card_ranks[1])
+          final_hand[1].append(card_ranks[2])
+          final_hand[1].append(card_ranks[3])
+          final_hand[1].append(card_ranks[4])
+        elif Straight == True:
+          #print("""Straight""")
+          final_hand[0] = 4
+          if card_ranks == wheel:
+            final_hand[1].append(card_ranks[1])
+          else:
+            final_hand[1].append(card_ranks[0])
+        else:
+          '''Interpret the high card.  '''
+          #print('High Card')
+          final_hand[0] = 0
+          final_hand[1].append(card_ranks[0])
+          final_hand[1].append(card_ranks[1])
+          final_hand[1].append(card_ranks[2])
+          final_hand[1].append(card_ranks[3])
+          final_hand[1].append(card_ranks[4])
+    return final_hand
+
+
+def winner(p1, p2,board):
+    '''return a winner from two hands'''
+    if p1.final_hand[0] > p2.final_hand[0]:
+      return p1
+    elif p2.final_hand[0] > p1.final_hand[0]:
+      return p2
+    else:
+      for i in range(len(p1.final_hand[1])):
+        if p1.final_hand[1][i] > p2.final_hand[1][i]:
+        	return p1
+        elif p2.final_hand[1][i] > p1.final_hand[1][i]:
+        	return p2
+        else:
+          tie = [p1, p2]
+          print(' Tie. ')
+          return tie
+def winner_sequel(p1, p2):
+    # print('Lets see all hands, please. ')
+    if p1[0] > p2[0]:
+        #print(p1.name+ ' wins. ')
+        return p1
+    elif p2[0] > p1[0]:
+        #print(p2.hand+' wins. ')
+        return p2
+    else:
+        for i in range(len(p1[1])):
+            if p1[1][i] > p2[1][i]:
+                return p1
+            elif p2[1][i] > p1[1][i]:
+                return p2
+            else:
+                print(p1)
+                print(p2)
+                tie = [p1, p2]
+                #print('Split pot. ')
+                return p1
+
+def gather_pot(table):
+    '''collect bets from players after round of betting. '''
+    pot = 0
+    for player in table:
+        pot += player.bet
+        player.bet = 0
+    return pot
+		
+			
+def callRaiseFold(player,previous_bet,muck):
+	while True:
+		if player.live_hand==True and previous_bet==0:
+			choice=input((str(player.name)+' check or bet, please. '))
+			#check or bet function
+			if choice == 'bet':
+				previous_bet=int(input(' How much '+str(player.name)+'?'))
+				player.place_bet(previous_bet)
+				break
+			elif choice=='check':
+				break
+		elif player.live_hand==True and previous_bet>0:
+			choice=input(str(player.name)+' call '+str(previous_bet)+', raise or fold. ')
+			if choice == 'raise':
+				pre_bet = previous_bet
+				previous_bet = int(input(' Raise to what?'))
+				while pre_bet>=previous_bet:
+					print('You have to bet more')
+					previous_bet = int(input(' Raise to what?'))
+				player.place_bet(previous_bet)
+				break
+			elif choice=='fold':
+				muck+=player.hand
+				player.hand=[]
+				player.live_hand=False
+				break
+				#call raise or fold function
+			elif choice=='call':
+				'''place the player difference in calling and raising here'''
+				player.bankroll+=player.bet
+				player.place_bet(previous_bet)
+				break
+		elif player.live_hand==False:
+			break
+			
+			print('Error somewheres. ')
+			break
+			continue
+		else:
+			print('new error somehow. ')
+	return previous_bet
+straight=rank_the_hand([Card(rank='7',suit='clubs'),Card(rank='8',suit='hearts'),Card(rank='9',suit='spades'),Card(rank='10',suit='clubs'),Card(rank='J',suit='spades')])
+
+'''some hands to play with. '''
+two_pair = rank_the_hand([Card(rank='J',suit='spades'),Card(rank='J',suit='clubs'),Card(rank='A',suit='diamonds'),Card(rank='A',suit='hearts'),Card(rank='7',suit='spades')])
+steelwheel = rank_the_hand([Card(rank='5', suit='hearts'), Card(rank='4', suit='hearts'), Card(rank='3', suit='hearts'),
+                            Card(rank='2', suit='hearts'), Card(rank='A', suit='hearts')])
+fourofakind = rank_the_hand([Card(rank='A', suit='clubs'), Card(rank='A', suit='hearts'), Card(rank='A', suit='spades'),
+                             Card(rank='A', suit='diamonds'), Card(rank='2', suit='hearts')])
+fullhouse = rank_the_hand([Card(rank='Q', suit='clubs'), Card(rank='Q', suit='hearts'), Card(rank='Q', suit='diamonds'),
+                           Card(rank='2', suit='spades'), Card(rank='2', suit='hearts')])
+flushy = rank_the_hand([Card(rank='K', suit='hearts'), Card(rank='5', suit='hearts'), Card(rank='4', suit='hearts'),
+                       Card(rank='J', suit='hearts'), Card(rank='7', suit='hearts')])
+
+Rocky = Player('Rocky', [], 100,0)
+#Rocky.deal_a_hand(deck, 2)
+Todd = Player('Todd', [], 100,0)
+#Todd.deal_a_hand(deck, 2)
+Dave = Player('Dave', [], 100,0)
+#Dave.deal_a_hand(deck, 2)
+Myrna = Player('Myrna', [], 100,0)
+#Myrna.deal_a_hand(deck, 2)
+Tom = Player('Tom', [], 100,0)
+#Tom.deal_a_hand(deck, 2)
+Larry = Player('Larry', [], 100,0)
+#Larry.deal_a_hand(deck, 2)
+
+table = [Rocky, Todd, Dave, Myrna, Tom, Larry]
+muck = []
+
+button = 0
+
+
+def action_round(table,button,bet,muck,pot):
+	'''A round of betting. '''
+	for player in table:
+		player.action=False
+	print('Round of betting. Action starts here. ')
+	action_on_you = button+1
+	all_acted_in_table=[i.action for i in table if i.live_hand==True]
+	new_bet=bet
+	laMesa=table[action_on_you:]+table[:action_on_you]
+	while all(all_acted_in_table)==False:
+		#print(all(all_acted_in_table))
+		for i in laMesa:
+			all_acted_in_table=[i.action for i in table if i.live_hand==True]
+			if all(all_acted_in_table)==True:
+				break
+			#print(all_acted_in_table)
+			new_bet=bet
+			i.action=True
+			bet=callRaiseFold(i,bet,muck)
+			if bet>new_bet:
+				for d in laMesa:
+					if d.name==i.name:
+						i.action=True
+					else:
+						d.action=False
+			else:
+				continue
+	for i in laMesa:
+		pot+=i.bet
+		i.bet=0
+		i.action=False
+	print('All bets in. '+str(pot)+' dollars added to the pot.  ')
+	#print(str(len(muck))+' cards in muck. ')
+	return pot
+
+
+
+def handOPoker(button, table,deck):
+    '''one hand from dealing a hand, flop,turn,river,payout and button move'''
+    board = []
+    muck = []
+    pot=0
+    final_pot=0
+    after_button=button+1
+    for player in table:
+        '''move the deal a hand loop to happen after blinds are placed.  '''
+        player.deal_a_hand(deck, 2)
+    '''big blind dollar amount'''
+    big_blind_temp = 2
+    small_blind_temp = 1
+    '''big blind player seat'''
+    big_blind = button + 2
+    small_blind = big_blind - 1
+    table[small_blind].place_bet(small_blind_temp)
+    print(str(table[small_blind].name)+' places '+str(small_blind_temp) +' for a small blind')
+    table[big_blind].place_bet(big_blind_temp)
+    print(str(table[big_blind].name)+' places '+str(big_blind_temp) + ' for a big blind')
+    '''first action after big blind'''
+    first_act=button+2
+    '''Round of betting pre flop'''
+    print('\n Your hand is...')
+    print(Tom.hand)
+    bet=0
+    table_post_blind=table[first_act:]+table[:first_act]
+    final_pot+=action_round(table_post_blind,button,big_blind_temp,muck,pot)
+    bet=0
+    print('The working pot is '+str(final_pot)+' dollars. ')
+    '''da flop'''
+    for i in range(3):
+        z = choice(deck)
+        deck.remove(z)
+        board.append(z)
+    print('The Flop \n')
+    print(board)
+    '''before the turn'''
+    print('\n Your hand is...')
+    print(Tom.hand)
+    bet = 0
+    final_pot += action_round(table,button,bet,muck,pot)
+    bet = 0
+    print('The working pot is '+str(final_pot)+' dollars. ')
+    '''the turn'''
+    turn = choice(deck)
+    deck.remove(turn)
+    board.append(turn)
+    print('The Turn. ')
+    print(board)
+    '''round of betting'''
+    bet = 0
+    final_pot+=action_round(table,button,bet,muck,pot)
+    '''the river'''
+    river = choice(deck)
+    deck.remove(river)
+    board.append(river)
+    print('The River. ')
+    print(board)
+    '''last round of betting'''
+    bet = 0
+    final_pot += action_round(table,button,bet,muck,pot)
+    bet = 0
+    '''Lets see all hands please
+    combine the players cards with the board. iterate over all combinations of five cards to get their best hand.'''
+    print('There are '+str(final_pot)+(' dollars in the pot. '))
+    winner=[i for i in table if i.live_hand==True]
+    winner =list(winner)
+    temp_hand=[0,[0,0,0]]
+    for i in winner:
+    	i.final_hand_met(i.hand,board)
+    	print(str(i.name)+'s'+ ' hand is '+'\n')
+    	print(i.final_hand)
+    	print('\n')
+    	temp_hand=winner_sequel(i.final_hand,temp_hand)
+    	print('The winning hand is '+ str(temp_hand))
+    confirmed_win_list=[i for i in table if i.live_hand==True and i.final_hand==temp_hand]
+    winnum=len(confirmed_win_list)
+    for i in winner:
+    	if i.final_hand==temp_hand:
+    		print('We have a winner. ')
+    		i.bankroll+=final_pot*(1/winnum)
+    		print(str(i.name)+' wins '+' with '+ str(i.identify_the_hand(i.final_hand)))
+    		print(i.bankroll)
+    	else:
+    		continue
+    deck+=muck
+    print('cards in deck: '+str(len(deck)))
+    print('Button is: '+str(button))
+    return button
+
+Tray = Player('Tray',[], 100,0)
+Tray.deal_a_hand(deck, 2)
+test_board=[Card(rank='4',suit='hearts'),Card(rank='4',suit='spades'),Card(rank='K',suit='hearts')]
+steelwheel_almost = [Card(rank='5', suit='hearts'), Card(rank='8', suit='spades'), Card(rank='3', suit='hearts'),
+                            Card(rank='2', suit='hearts'), Card(rank='A', suit='hearts')]
+Tray.hand=steelwheel_almost
+
+print(Tray.final_hand_met(Tray.hand,test_board))
+solid = Player('Solid_1',[],100,0)
+solid.deal_a_hand(deck,2)
+liquid = Player('Liquid_2',[],100,0)
+liquid.deal_a_hand(deck,2)
+solidus = Player('Solidus_3',[],100,0)
+solidus.deal_a_hand(deck,2)
+ocelot = Player('Ocelot_4',[],50,0)
+ocelot.deal_a_hand(deck,2)
+
+dietisch =[solid,liquid,solidus,ocelot]
+all_bets_in = all([i.bet for i in table if i.live_hand])
+
+actionyyy = False
+bet = 0
+pot=0
+#handOPoker(button,table)
+#whileaction(dietisch,3,pot)
+flop_turn_river= [choice(deck) for i in range(5)]
+#print(flop_turn_river)
+solid.final_hand_met(solid.hand,flop_turn_river)
+liquid.final_hand_met(liquid.hand,flop_turn_river)
+solidus.final_hand_met(solidus.hand,flop_turn_river)
+ocelot.final_hand_met(ocelot.hand,flop_turn_river)
+
+#print(winner_sequel(solid.final_hand,ocelot.final_hand))
+#print(solid.final_hand_met(solid.hand,flop_turn_river))
+#c=reduce(winner(solid,liquid,flop_turn_river),dietisch)
+def game_of_poker(table):
+	game=True
+	button=0
+	while game==True:
+		deck=list(FrenchDeck())
+		handOPoker(button,table,deck)
+		button+=1
+		another_hand=input('Do you wish to play another hand? ')
+		if another_hand=='yes':
+			continue
+		elif game=='no':
+			game=False
+		else:
+			continue
+		if button>=len(table):
+			button=0
+		else:
+			continue
+game_of_poker(table)
+#action_round(dietisch,0,0,muck,pot)
+finale=0
+'''
+for i in range(2):
+	butt=1
+	finale=action_round(dietisch,butt,bet,muck,pot)
+	butt+=1
+
+'''
+
+			
+			
+		
+
+Von meinem iPhone gesendet
